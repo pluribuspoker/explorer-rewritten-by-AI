@@ -187,7 +187,7 @@
     // mark this node so we don't parse it twice
     seenDomNodes.add(node)
 
-    logLineWithResources(lineText, node)
+    logEventDetails(lineText, node)
 
     // minimal: handle only “got”
     const event = parseGotEvent(lineText, node)
@@ -204,16 +204,69 @@
     renderOverlay()
   }
 
-  /** ---------- helper: log lineText, node, and resource counts ---------- */
-  function logLineWithResources (lineText, node) {
+  /** ---------- helper: log all event details (resource, dice, etc.) ---------- */
+  function logEventDetails (lineText, node) {
+    let details = []
+
+    // Resource event
     const resources = countResourceImages(node)
-    const nonZero = Object.entries(resources).filter(([_, v]) => v > 0)
-    if (nonZero.length) {
-      const pretty = nonZero.map(([k, v]) => `${k}:${v}`).join(', ')
-      log('line:', lineText, 'resources:', pretty)
+    const nonZeroResources = Object.entries(resources).filter(([_, v]) => v > 0)
+    if (nonZeroResources.length) {
+      details.push(
+        'resources: ' + nonZeroResources.map(([k, v]) => `${k}:${v}`).join(', ')
+      )
+    }
+
+    // Dice event
+    if (/\brolled\b/i.test(lineText)) {
+      const sum = getDiceSum(node)
+      if (sum !== null) {
+        details.push('dice: ' + sum)
+      }
+    }
+
+    // Placed event detection
+    if (/\bplaced a\b/i.test(lineText)) {
+      const placed = getPlacedItems(node)
+      if (placed.length) {
+        details.push(placed.join(', '))
+      }
+    }
+
+    if (details.length) {
+      log('line:', lineText, ...details)
     } else {
       log('line:', lineText)
     }
+  }
+
+  /** ---------- helper: extract and sum dice values from node ---------- */
+  function getDiceSum (node) {
+    const imgs = node.querySelectorAll?.('img') || []
+    const imgSrcs = Array.from(imgs).map(img => img.currentSrc || img.src || '')
+    const diceValues = imgSrcs
+      .map(src => {
+        const m = src.match(/dice_(\d+)/i)
+        return m ? parseInt(m[1], 10) : null
+      })
+      .filter(v => v !== null)
+    if (diceValues.length) {
+      return diceValues.reduce((a, b) => a + b, 0)
+    }
+    return null
+  }
+
+  /** ---------- helper: detect placed items (road, settlement, etc.) ---------- */
+  function getPlacedItems (node) {
+    const imgs = node.querySelectorAll?.('img') || []
+    const imgSrcs = Array.from(imgs).map(img => img.currentSrc || img.src || '')
+    const items = []
+    for (const src of imgSrcs) {
+      if (/road_\w+\.\w+\.svg/i.test(src)) items.push('road')
+      if (/settlement_\w+\.\w+\.svg/i.test(src)) items.push('settlement')
+      // Add more patterns for other placed items as needed
+    }
+    return items
   }
 
   /** ---------- one-time scan of whatever is already rendered ---------- */

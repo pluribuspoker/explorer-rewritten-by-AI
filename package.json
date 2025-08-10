@@ -1,0 +1,10 @@
+{
+  "name": "mini-explorer",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Colonist Mini Explorer split into modules",
+  "main": "explorer.js",
+  "scripts": {},
+  "author": "",
+  "license": "MIT"
+}
