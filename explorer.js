@@ -31,7 +31,8 @@ import { recordDice, getDiceCounts, clearDice } from './state/dice.js'
 import {
   getOverlayBody,
   renderOverlay,
-  ensureDebugControls
+  ensureDebugControls,
+  renderDiceGraph
 } from './ui/overlay.js'
 import { walkAllNodes, startObservers } from './dom.js'
 import { lineSignature, isSignatureDuplicate, markSignature } from './dedup.js'
@@ -196,6 +197,7 @@ function applyEvent (evt) {
   }
   // Overlay always re-renders after any recognized event for now.
   renderOverlay(playerEntries())
+  renderDiceGraph(getDiceCounts())
 }
 
 // 5. Logging & diagnostics -------------------------------------------------
@@ -314,6 +316,7 @@ window.__miniExplorer = {
     clearPlayers()
     clearDice()
     renderOverlay(playerEntries())
+  renderDiceGraph(getDiceCounts())
   },
   dice () {
     return getDiceCounts()
@@ -323,6 +326,7 @@ window.__miniExplorer = {
 try {
   getOverlayBody()
   renderOverlay(playerEntries())
+  renderDiceGraph(getDiceCounts())
   ensureDebugControls()
   initialScan()
   startObservers(processNode) // observe new DOM
