@@ -10,7 +10,7 @@
   "content_scripts": [
     {
       "matches": ["*://colonist.io/*"],
-      "js": ["explorer.js"],
+      "js": ["dist/explorer.bundle.js"],
       "run_at": "document_idle"
     }
   ]

@@ -1,105 +1,18 @@
-/**
- * Colonist Mini Explorer (v0)
- * ---------------------------------------
- * Goal: get traction with the simplest possible approach.
- * - Watches the page for chat-like lines (no fragile selectors).
- * - Parses only “NAME got …” lines by counting resource icons in that line.
- * - Shows a tiny overlay with per-player tallies.
- *
- * This is intentionally small and readable so you can iterate fast.
- */
-/* eslint-disable no-console */
-
+import {
+  TAG,
+  CANDIDATE_LINE_REGEX,
+  IMAGE_HINTS,
+  RESOURCE_KEYS
+} from './config.js'
+import { log, warn, err } from './logger.js'
+import {
+  addResources,
+  entries as playerEntries,
+  clearPlayers,
+  snapshot
+} from './state/players.js'
+import { getOverlayBody, renderOverlay } from './ui/overlay.js'
 ;(() => {
-  /** ---------- logging helpers ---------- */
-  const TAG = '[MiniExplorer]'
-  const log = (...a) => console.log(TAG, ...a)
-  const warn = (...a) => console.warn(TAG, ...a)
-  const err = (...a) => console.error(TAG, ...a)
-
-  /** ---------- what looks like a “log line” to us ---------- */
-  // keep this broad so we can see lines we might want to support later
-  const CANDIDATE_LINE_REGEX =
-    /(rolled|got|gave|and got|wants to give|placed a|built a|bought|discarded|stole|took from bank|received starting resources)/i
-
-  /** ---------- resource detection (by icon filename) ---------- */
-  const IMAGE_HINTS = {
-    wood: /card_lumber/i,
-    brick: /card_brick/i,
-    sheep: /card_wool/i,
-    wheat: /card_grain/i,
-    ore: /card_ore/i
-  }
-  const RESOURCE_KEYS = ['wood', 'brick', 'sheep', 'wheat', 'ore']
-
-  /** ---------- state: very simple tallies for “NAME got …” ---------- */
-  // players map → { wood, brick, sheep, wheat, ore, total }
-  const players = new Map()
-
-  function ensurePlayer (name) {
-    if (!players.has(name)) {
-      players.set(name, {
-        wood: 0,
-        brick: 0,
-        sheep: 0,
-        wheat: 0,
-        ore: 0,
-        total: 0
-      })
-    }
-    return players.get(name)
-  }
-
-  /** ---------- tiny overlay UI so you can see counts ---------- */
-  function getOverlayBody () {
-    let root = document.getElementById('mini-explorer')
-    if (!root) {
-      root = document.createElement('div')
-      root.id = 'mini-explorer'
-      Object.assign(root.style, {
-        position: 'fixed',
-        top: '56px',
-        right: '8px',
-        zIndex: 999999,
-        font: '12px/1.3 -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
-        background: 'rgba(20,20,20,0.85)',
-        color: '#fff',
-        padding: '8px 10px',
-        borderRadius: '10px',
-        boxShadow: '0 4px 16px rgba(0,0,0,.3)',
-        maxWidth: '280px',
-        pointerEvents: 'none'
-      })
-
-      // simple header + body
-      root.innerHTML = `
-        <div style="font-weight:600;margin-bottom:6px">Mini Explorer</div>
-        <div id="mini-explorer-body" style="white-space:pre-wrap"></div>
-      `
-
-      document.documentElement.appendChild(root)
-    }
-    return root.querySelector('#mini-explorer-body')
-  }
-
-  function renderOverlay () {
-    const body = getOverlayBody()
-    const lines = [...players.entries()].map(([name, r]) => {
-      const row =
-        `${name.padEnd(10)}  ` +
-        `🪵${r.wood} ` +
-        `🧱${r.brick} ` +
-        `🐑${r.sheep} ` +
-        `🌾${r.wheat} ` +
-        `⛰️${r.ore}  = ${r.total}`
-      return row
-    })
-
-    body.textContent = lines.length
-      ? lines.join('\n')
-      : "Listening… (roll, chat, 'got' events)"
-  }
-
   /** ---------- DOM iteration helpers (covers shadow roots & iframes) ---------- */
   function* walkAllNodes (root) {
     const stack = [root]
@@ -193,15 +106,8 @@
     const event = parseGotEvent(lineText, node)
     if (!event) return
 
-    const p = ensurePlayer(event.player)
-    for (const key of RESOURCE_KEYS) {
-      const n = event.resources[key]
-      if (n) {
-        p[key] += n
-        p.total += n
-      }
-    }
-    renderOverlay()
+    addResources(event.player, event.resources)
+    renderOverlay(playerEntries())
   }
 
   /** ---------- helper: log all event details (resource, dice, etc.) ---------- */
@@ -341,23 +247,20 @@
   /** ---------- optional debug helpers ---------- */
   window.__miniExplorer = {
     dump () {
-      const rows = [...players.entries()].map(([player, r]) => ({
-        player,
-        ...r
-      }))
+      const rows = snapshot()
       console.table(rows)
       return rows
     },
     clear () {
-      players.clear()
-      renderOverlay()
+      clearPlayers()
+      renderOverlay(playerEntries())
     }
   }
 
   /** ---------- boot ---------- */
   try {
     getOverlayBody()
-    renderOverlay()
+    renderOverlay(playerEntries())
     initialScan()
     startObservers()
     log(

@@ -4,7 +4,13 @@
   "version": "1.0.0",
   "description": "Colonist Mini Explorer split into modules",
   "main": "explorer.js",
-  "scripts": {},
+  "scripts": {
+    "build": "esbuild explorer.js --bundle --format=iife --target=chrome120 --outfile=dist/explorer.bundle.js",
+    "watch": "esbuild explorer.js --bundle --format=iife --target=chrome120 --outfile=dist/explorer.bundle.js --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.4"
+  },
   "author": "",
   "license": "MIT"
 }
