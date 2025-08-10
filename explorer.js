@@ -1,4 +1,9 @@
-import { TAG, CANDIDATE_LINE_REGEX, IMAGE_HINTS, RESOURCE_KEYS } from './config.js'
+import {
+  TAG,
+  CANDIDATE_LINE_REGEX,
+  IMAGE_HINTS,
+  RESOURCE_KEYS
+} from './config.js'
 import { log, warn, err } from './logger.js'
 import {
   addResources,
@@ -8,7 +13,6 @@ import {
 } from './state/players.js'
 import { getOverlayBody, renderOverlay } from './ui/overlay.js'
 import { walkAllNodes, startObservers } from './dom.js'
-
 
 /** ---------- small normalizers ---------- */
 function textFrom (node) {
@@ -154,7 +158,6 @@ function initialScan () {
   }
   log('initial scan done. candidates:', candidates)
 }
-
 
 /** ---------- optional debug helpers ---------- */
 window.__miniExplorer = {

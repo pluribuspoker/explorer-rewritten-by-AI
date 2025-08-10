@@ -4,7 +4,7 @@ import { log } from './logger.js'
  * Walk all descendant nodes of a root, traversing into shadow roots and same-origin iframes.
  * Yields every node (depth-first) including the root itself.
  */
-export function * walkAllNodes (root) {
+export function* walkAllNodes (root) {
   const stack = [root]
   const seenDocs = new Set()
 
