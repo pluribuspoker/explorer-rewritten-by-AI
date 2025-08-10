@@ -172,7 +172,7 @@ export function renderDiceGraph (counts) {
       const h = v === 0 ? 2 : Math.max(4, Math.round((v / max) * barMaxPx))
       const opacity = v === 0 ? 0.25 : 0.85
       return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1;min-width:14px;">
-        <div title="${label}: ${v}" style="width:100%;background:linear-gradient(180deg,#4caf50,#2e7d32);height:${h}px;border-radius:3px 3px 0 0;opacity:${opacity};transition:height .25s ease,opacity .25s ease"></div>
+        <div class="mx-dice-bar" data-tip="${label}: ${v}" style="width:100%;background:linear-gradient(180deg,#4caf50,#2e7d32);height:${h}px;border-radius:3px 3px 0 0;opacity:${opacity};transition:height .25s ease,opacity .25s ease;position:relative;"></div>
         <div style="font-size:10px;margin-top:2px;opacity:.8">${label}</div>
       </div>`
     })
@@ -272,6 +272,8 @@ function injectOverlayStyles () {
     #mini-explorer .mx-row:not(.mx-header):hover { background:rgba(255,255,255,0.06); }
     #mini-explorer .mx-row.mx-leader { background:linear-gradient(90deg,rgba(255,215,0,0.18),rgba(255,215,0,0)); }
     #mini-explorer .mx-h { filter:brightness(1.1); }
+  #mini-explorer .mx-dice-bar:hover::after { content: attr(data-tip); position:absolute; left:50%; top:-4px; transform:translate(-50%, -100%); background:rgba(0,0,0,0.85); color:#fff; padding:2px 5px; font-size:10px; line-height:1; border-radius:4px; pointer-events:none; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.4); }
+  #mini-explorer .mx-dice-bar:hover::before { content:''; position:absolute; left:50%; top:-4px; transform:translate(-50%, -100%); border:5px solid transparent; border-top-color:rgba(0,0,0,0.85); margin-top:4px; }
   `
   document.head.appendChild(style)
 }
