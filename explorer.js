@@ -10,17 +10,17 @@
  */
 /* eslint-disable no-console */
 
-(() => {
+;(() => {
   /** ---------- logging helpers ---------- */
-  const TAG = "[MiniExplorer]";
-  const log = (...a) => console.log(TAG, ...a);
-  const warn = (...a) => console.warn(TAG, ...a);
-  const err = (...a) => console.error(TAG, ...a);
+  const TAG = '[MiniExplorer]'
+  const log = (...a) => console.log(TAG, ...a)
+  const warn = (...a) => console.warn(TAG, ...a)
+  const err = (...a) => console.error(TAG, ...a)
 
   /** ---------- what looks like a “log line” to us ---------- */
   // keep this broad so we can see lines we might want to support later
   const CANDIDATE_LINE_REGEX =
-    /(rolled|got|gave|and got|wants to give|placed a|built a|bought|discarded|stole|took from bank|received starting resources)/i;
+    /(rolled|got|gave|and got|wants to give|placed a|built a|bought|discarded|stole|took from bank|received starting resources)/i
 
   /** ---------- resource detection (by icon filename) ---------- */
   const IMAGE_HINTS = {
@@ -29,54 +29,61 @@
     sheep: /card_wool/i,
     wheat: /card_grain/i,
     ore: /card_ore/i
-  };
-  const RESOURCE_KEYS = ["wood", "brick", "sheep", "wheat", "ore"];
+  }
+  const RESOURCE_KEYS = ['wood', 'brick', 'sheep', 'wheat', 'ore']
 
   /** ---------- state: very simple tallies for “NAME got …” ---------- */
   // players map → { wood, brick, sheep, wheat, ore, total }
-  const players = new Map();
+  const players = new Map()
 
-  function ensurePlayer(name) {
+  function ensurePlayer (name) {
     if (!players.has(name)) {
-      players.set(name, { wood: 0, brick: 0, sheep: 0, wheat: 0, ore: 0, total: 0 });
+      players.set(name, {
+        wood: 0,
+        brick: 0,
+        sheep: 0,
+        wheat: 0,
+        ore: 0,
+        total: 0
+      })
     }
-    return players.get(name);
+    return players.get(name)
   }
 
   /** ---------- tiny overlay UI so you can see counts ---------- */
-  function getOverlayBody() {
-    let root = document.getElementById("mini-explorer");
+  function getOverlayBody () {
+    let root = document.getElementById('mini-explorer')
     if (!root) {
-      root = document.createElement("div");
-      root.id = "mini-explorer";
+      root = document.createElement('div')
+      root.id = 'mini-explorer'
       Object.assign(root.style, {
-        position: "fixed",
-        top: "56px",
-        right: "8px",
+        position: 'fixed',
+        top: '56px',
+        right: '8px',
         zIndex: 999999,
-        font: "12px/1.3 -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
-        background: "rgba(20,20,20,0.85)",
-        color: "#fff",
-        padding: "8px 10px",
-        borderRadius: "10px",
-        boxShadow: "0 4px 16px rgba(0,0,0,.3)",
-        maxWidth: "280px",
-        pointerEvents: "none"
-      });
+        font: '12px/1.3 -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
+        background: 'rgba(20,20,20,0.85)',
+        color: '#fff',
+        padding: '8px 10px',
+        borderRadius: '10px',
+        boxShadow: '0 4px 16px rgba(0,0,0,.3)',
+        maxWidth: '280px',
+        pointerEvents: 'none'
+      })
 
       // simple header + body
       root.innerHTML = `
         <div style="font-weight:600;margin-bottom:6px">Mini Explorer</div>
         <div id="mini-explorer-body" style="white-space:pre-wrap"></div>
-      `;
+      `
 
-      document.documentElement.appendChild(root);
+      document.documentElement.appendChild(root)
     }
-    return root.querySelector("#mini-explorer-body");
+    return root.querySelector('#mini-explorer-body')
   }
 
-  function renderOverlay() {
-    const body = getOverlayBody();
+  function renderOverlay () {
+    const body = getOverlayBody()
     const lines = [...players.entries()].map(([name, r]) => {
       const row =
         `${name.padEnd(10)}  ` +
@@ -84,33 +91,33 @@
         `🧱${r.brick} ` +
         `🐑${r.sheep} ` +
         `🌾${r.wheat} ` +
-        `⛰️${r.ore}  = ${r.total}`;
-      return row;
-    });
+        `⛰️${r.ore}  = ${r.total}`
+      return row
+    })
 
     body.textContent = lines.length
-      ? lines.join("\n")
-      : "Listening… (roll, chat, 'got' events)";
+      ? lines.join('\n')
+      : "Listening… (roll, chat, 'got' events)"
   }
 
   /** ---------- DOM iteration helpers (covers shadow roots & iframes) ---------- */
-  function* walkAllNodes(root) {
-    const stack = [root];
-    const seenDocs = new Set();
+  function* walkAllNodes (root) {
+    const stack = [root]
+    const seenDocs = new Set()
 
     while (stack.length) {
-      const node = stack.pop();
-      if (!node) continue;
-      yield node;
+      const node = stack.pop()
+      if (!node) continue
+      yield node
 
-      if (node.shadowRoot) stack.push(node.shadowRoot);
+      if (node.shadowRoot) stack.push(node.shadowRoot)
 
-      if (node.tagName === "IFRAME") {
+      if (node.tagName === 'IFRAME') {
         try {
-          const doc = node.contentDocument || node.contentWindow?.document;
+          const doc = node.contentDocument || node.contentWindow?.document
           if (doc && !seenDocs.has(doc)) {
-            seenDocs.add(doc);
-            stack.push(doc);
+            seenDocs.add(doc)
+            stack.push(doc)
           }
         } catch {
           /* cross-origin iframe */
@@ -119,173 +126,191 @@
 
       if (node.children) {
         for (let i = node.children.length - 1; i >= 0; i--) {
-          stack.push(node.children[i]);
+          stack.push(node.children[i])
         }
       }
     }
   }
 
   /** ---------- small normalizers ---------- */
-  function textFrom(node) {
+  function textFrom (node) {
     try {
-      return (node.innerText || node.textContent || "").trim();
+      return (node.innerText || node.textContent || '').trim()
     } catch {
-      return "";
+      return ''
     }
   }
 
-  function countResourceImages(container) {
-    const counts = { wood: 0, brick: 0, sheep: 0, wheat: 0, ore: 0 };
+  function countResourceImages (container) {
+    const counts = { wood: 0, brick: 0, sheep: 0, wheat: 0, ore: 0 }
     try {
-      const imgs = container.querySelectorAll?.("img") || [];
+      const imgs = container.querySelectorAll?.('img') || []
       for (const img of imgs) {
-        const src = img.currentSrc || img.src || "";
+        const src = img.currentSrc || img.src || ''
         for (const key of RESOURCE_KEYS) {
-          if (IMAGE_HINTS[key].test(src)) counts[key]++;
+          if (IMAGE_HINTS[key].test(src)) counts[key]++
         }
       }
     } catch {
       /* ignore */
     }
-    return counts;
+    return counts
   }
 
   /** ---------- parser: just handle “NAME got …” ---------- */
-  function parseGotEvent(lineText, node) {
+  function parseGotEvent (lineText, node) {
     // we only care about lines that contain “got”
-    if (!/\bgot\b/i.test(lineText)) return null;
+    if (!/\bgot\b/i.test(lineText)) return null
 
     // assume the first token is the player's name
-    const playerName = lineText.split(/\s+/)[0];
-    if (!playerName) return null;
+    const playerName = lineText.split(/\s+/)[0]
+    if (!playerName) return null
 
     // count resource icons in that line
-    const resources = countResourceImages(node);
-    const gotAny = RESOURCE_KEYS.some((k) => resources[k] > 0);
-    if (!gotAny) return null;
+    const resources = countResourceImages(node)
+    const gotAny = RESOURCE_KEYS.some(k => resources[k] > 0)
+    if (!gotAny) return null
 
-    return { type: "got", player: playerName, resources };
+    return { type: 'got', player: playerName, resources }
   }
 
   /** ---------- process a candidate “log line” node once ---------- */
-  const seenDomNodes = new WeakSet();
+  const seenDomNodes = new WeakSet()
 
-  function processNode(node) {
-    if (!(node instanceof HTMLElement)) return;
-    if (seenDomNodes.has(node)) return;
+  function processNode (node) {
+    if (!(node instanceof HTMLElement)) return
+    if (seenDomNodes.has(node)) return
 
-    const lineText = textFrom(node);
-    if (!lineText || !CANDIDATE_LINE_REGEX.test(lineText)) return;
+    const lineText = textFrom(node)
+    if (!lineText || !CANDIDATE_LINE_REGEX.test(lineText)) return
 
     // mark this node so we don't parse it twice
-    seenDomNodes.add(node);
+    seenDomNodes.add(node)
 
-    log("line:", lineText);
+    logLineWithResources(lineText, node)
 
     // minimal: handle only “got”
-    const event = parseGotEvent(lineText, node);
-    if (!event) return;
+    const event = parseGotEvent(lineText, node)
+    if (!event) return
 
-    const p = ensurePlayer(event.player);
+    const p = ensurePlayer(event.player)
     for (const key of RESOURCE_KEYS) {
-      const n = event.resources[key];
+      const n = event.resources[key]
       if (n) {
-        p[key] += n;
-        p.total += n;
+        p[key] += n
+        p.total += n
       }
     }
-    renderOverlay();
+    renderOverlay()
+  }
+
+  /** ---------- helper: log lineText, node, and resource counts ---------- */
+  function logLineWithResources (lineText, node) {
+    const resources = countResourceImages(node)
+    const nonZero = Object.entries(resources).filter(([_, v]) => v > 0)
+    if (nonZero.length) {
+      const pretty = nonZero.map(([k, v]) => `${k}:${v}`).join(', ')
+      log('line:', lineText, 'resources:', pretty)
+    } else {
+      log('line:', lineText)
+    }
   }
 
   /** ---------- one-time scan of whatever is already rendered ---------- */
-  function initialScan() {
-    let candidates = 0;
+  function initialScan () {
+    let candidates = 0
     for (const node of walkAllNodes(document)) {
       if (node instanceof HTMLElement) {
-        const txt = textFrom(node);
+        const txt = textFrom(node)
         if (txt && CANDIDATE_LINE_REGEX.test(txt)) {
-          processNode(node);
-          candidates++;
+          processNode(node)
+          candidates++
         }
       }
     }
-    log("initial scan done. candidates:", candidates);
+    log('initial scan done. candidates:', candidates)
   }
 
   /** ---------- keep watching for newly added lines (incl. shadow/iframes) ---------- */
-  function startObservers() {
-    const observers = [];
+  function startObservers () {
+    const observers = []
 
-    function observe(root) {
+    function observe (root) {
       try {
-        const obs = new MutationObserver((mutations) => {
+        const obs = new MutationObserver(mutations => {
           for (const m of mutations) {
-            if (!m.addedNodes) continue;
+            if (!m.addedNodes) continue
 
-            m.addedNodes.forEach(processNode);
+            m.addedNodes.forEach(processNode)
 
             // if new shadow host / iframe appears, start observing those too
-            m.addedNodes.forEach((n) => {
-              if (n instanceof HTMLElement && n.shadowRoot) observe(n.shadowRoot);
+            m.addedNodes.forEach(n => {
+              if (n instanceof HTMLElement && n.shadowRoot)
+                observe(n.shadowRoot)
               if (n instanceof HTMLIFrameElement) {
                 try {
-                  const doc = n.contentDocument || n.contentWindow?.document;
-                  if (doc) observe(doc);
+                  const doc = n.contentDocument || n.contentWindow?.document
+                  if (doc) observe(doc)
                 } catch {
                   /* cross-origin iframe */
                 }
               }
-            });
+            })
           }
-        });
+        })
 
-        obs.observe(root, { childList: true, subtree: true });
-        observers.push(obs);
+        obs.observe(root, { childList: true, subtree: true })
+        observers.push(obs)
       } catch {
         /* ignore */
       }
     }
 
-    observe(document);
+    observe(document)
 
     // also hook existing shadow roots / iframes right away
     for (const n of walkAllNodes(document)) {
-      if (n instanceof HTMLElement && n.shadowRoot) observe(n.shadowRoot);
+      if (n instanceof HTMLElement && n.shadowRoot) observe(n.shadowRoot)
       if (n instanceof HTMLIFrameElement) {
         try {
-          const doc = n.contentDocument || n.contentWindow?.document;
-          if (doc) observe(doc);
+          const doc = n.contentDocument || n.contentWindow?.document
+          if (doc) observe(doc)
         } catch {
           /* cross-origin iframe */
         }
       }
     }
 
-    log("observers attached:", observers.length);
-    return () => observers.forEach((o) => o.disconnect());
+    log('observers attached:', observers.length)
+    return () => observers.forEach(o => o.disconnect())
   }
 
   /** ---------- optional debug helpers ---------- */
   window.__miniExplorer = {
-    dump() {
-      const rows = [...players.entries()].map(([player, r]) => ({ player, ...r }));
-      console.table(rows);
-      return rows;
+    dump () {
+      const rows = [...players.entries()].map(([player, r]) => ({
+        player,
+        ...r
+      }))
+      console.table(rows)
+      return rows
     },
-    clear() {
-      players.clear();
-      renderOverlay();
+    clear () {
+      players.clear()
+      renderOverlay()
     }
-  };
+  }
 
   /** ---------- boot ---------- */
   try {
-    getOverlayBody();
-    renderOverlay();
-    initialScan();
-    startObservers();
-    log("READY. Move/roll/get resources to see logs; call window.__miniExplorer.dump()");
+    getOverlayBody()
+    renderOverlay()
+    initialScan()
+    startObservers()
+    log(
+      'READY. Move/roll/get resources to see logs; call window.__miniExplorer.dump()'
+    )
   } catch (e) {
-    err("boot failed:", e);
+    err('boot failed:', e)
   }
-})();
+})()
