@@ -46,10 +46,18 @@ function makeBtn (label, title, onClick) {
   })
   b.addEventListener('click', e => {
     e.stopPropagation()
-    try { onClick() } catch (err) { console.error(err) }
+    try {
+      onClick()
+    } catch (err) {
+      console.error(err)
+    }
   })
-  b.addEventListener('mouseenter', () => { b.style.background = '#444' })
-  b.addEventListener('mouseleave', () => { b.style.background = '#333' })
+  b.addEventListener('mouseenter', () => {
+    b.style.background = '#444'
+  })
+  b.addEventListener('mouseleave', () => {
+    b.style.background = '#333'
+  })
   return b
 }
 
@@ -61,7 +69,11 @@ export function ensureDebugControls () {
   bar.dataset.ready = '1'
   const api = window.__miniExplorer || {}
   bar.appendChild(
-    makeBtn('Dump', 'Console table of player resources', () => api.dump && api.dump())
+    makeBtn(
+      'Dump',
+      'Console table of player resources',
+      () => api.dump && api.dump()
+    )
   )
   bar.appendChild(
     makeBtn('Dice', 'Console log dice counts', () => {
@@ -72,7 +84,11 @@ export function ensureDebugControls () {
     })
   )
   bar.appendChild(
-    makeBtn('Clear', 'Clear player + dice state', () => api.clear && api.clear())
+    makeBtn(
+      'Clear',
+      'Clear player + dice state',
+      () => api.clear && api.clear()
+    )
   )
 }
 

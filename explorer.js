@@ -28,7 +28,11 @@ import {
   snapshot
 } from './state/players.js'
 import { recordDice, getDiceCounts, clearDice } from './state/dice.js'
-import { getOverlayBody, renderOverlay, ensureDebugControls } from './ui/overlay.js'
+import {
+  getOverlayBody,
+  renderOverlay,
+  ensureDebugControls
+} from './ui/overlay.js'
 import { walkAllNodes, startObservers } from './dom.js'
 import { lineSignature, isSignatureDuplicate, markSignature } from './dedup.js'
 
