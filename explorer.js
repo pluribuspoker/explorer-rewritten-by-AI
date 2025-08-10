@@ -1,9 +1,4 @@
-import {
-  TAG,
-  CANDIDATE_LINE_REGEX,
-  IMAGE_HINTS,
-  RESOURCE_KEYS
-} from './config.js'
+import { TAG, CANDIDATE_LINE_REGEX, IMAGE_HINTS, RESOURCE_KEYS } from './config.js'
 import { log, warn, err } from './logger.js'
 import {
   addResources,
@@ -12,38 +7,8 @@ import {
   snapshot
 } from './state/players.js'
 import { getOverlayBody, renderOverlay } from './ui/overlay.js'
-// IIFE removed; code now executes at top level.
-/** ---------- DOM iteration helpers (covers shadow roots & iframes) ---------- */
-function* walkAllNodes (root) {
-  const stack = [root]
-  const seenDocs = new Set()
+import { walkAllNodes, startObservers } from './dom.js'
 
-  while (stack.length) {
-    const node = stack.pop()
-    if (!node) continue
-    yield node
-
-    if (node.shadowRoot) stack.push(node.shadowRoot)
-
-    if (node.tagName === 'IFRAME') {
-      try {
-        const doc = node.contentDocument || node.contentWindow?.document
-        if (doc && !seenDocs.has(doc)) {
-          seenDocs.add(doc)
-          stack.push(doc)
-        }
-      } catch {
-        /* cross-origin iframe */
-      }
-    }
-
-    if (node.children) {
-      for (let i = node.children.length - 1; i >= 0; i--) {
-        stack.push(node.children[i])
-      }
-    }
-  }
-}
 
 /** ---------- small normalizers ---------- */
 function textFrom (node) {
@@ -190,58 +155,6 @@ function initialScan () {
   log('initial scan done. candidates:', candidates)
 }
 
-/** ---------- keep watching for newly added lines (incl. shadow/iframes) ---------- */
-function startObservers () {
-  const observers = []
-
-  function observe (root) {
-    try {
-      const obs = new MutationObserver(mutations => {
-        for (const m of mutations) {
-          if (!m.addedNodes) continue
-
-          m.addedNodes.forEach(processNode)
-
-          // if new shadow host / iframe appears, start observing those too
-          m.addedNodes.forEach(n => {
-            if (n instanceof HTMLElement && n.shadowRoot) observe(n.shadowRoot)
-            if (n instanceof HTMLIFrameElement) {
-              try {
-                const doc = n.contentDocument || n.contentWindow?.document
-                if (doc) observe(doc)
-              } catch {
-                /* cross-origin iframe */
-              }
-            }
-          })
-        }
-      })
-
-      obs.observe(root, { childList: true, subtree: true })
-      observers.push(obs)
-    } catch {
-      /* ignore */
-    }
-  }
-
-  observe(document)
-
-  // also hook existing shadow roots / iframes right away
-  for (const n of walkAllNodes(document)) {
-    if (n instanceof HTMLElement && n.shadowRoot) observe(n.shadowRoot)
-    if (n instanceof HTMLIFrameElement) {
-      try {
-        const doc = n.contentDocument || n.contentWindow?.document
-        if (doc) observe(doc)
-      } catch {
-        /* cross-origin iframe */
-      }
-    }
-  }
-
-  log('observers attached:', observers.length)
-  return () => observers.forEach(o => o.disconnect())
-}
 
 /** ---------- optional debug helpers ---------- */
 window.__miniExplorer = {
@@ -261,7 +174,8 @@ try {
   getOverlayBody()
   renderOverlay(playerEntries())
   initialScan()
-  startObservers()
+  // start DOM observers (pass processNode so new nodes get parsed)
+  startObservers(processNode)
   log(
     'READY. Move/roll/get resources to see logs; call window.__miniExplorer.dump()'
   )
