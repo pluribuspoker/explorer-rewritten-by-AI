@@ -27,7 +27,8 @@ import {
   clearPlayers,
   snapshot
 } from './state/players.js'
-import { getOverlayBody, renderOverlay } from './ui/overlay.js'
+import { recordDice, getDiceCounts, clearDice } from './state/dice.js'
+import { getOverlayBody, renderOverlay, ensureDebugControls } from './ui/overlay.js'
 import { walkAllNodes, startObservers } from './dom.js'
 import { lineSignature, isSignatureDuplicate, markSignature } from './dedup.js'
 
@@ -82,6 +83,12 @@ function formatResourceSummary (resources) {
 const eventParsers = []
 
 // --- Concrete parsers ----------------------------------------------------
+function parseDiceRollEvent (lineText, node) {
+  if (!/\brolled\b/i.test(lineText)) return null
+  const sum = getDiceSum(node)
+  if (sum === null) return null
+  return { type: 'dice_roll', diceSum: sum, rawText: lineText, node }
+}
 
 function parseStartingResourcesEvent (lineText, node) {
   // Shape: "<PlayerName> received starting resources" + resource icons
@@ -134,6 +141,7 @@ function parseGotEvent (lineText, node) {
 }
 
 // Register parsers in priority order (top-first match wins)
+eventParsers.push(parseDiceRollEvent)
 eventParsers.push(parseStartingResourcesEvent)
 eventParsers.push(parseGotEvent)
 
@@ -169,6 +177,12 @@ function applyEvent (evt) {
         // Incremental: internal event log (will later replace external pre-parse logging)
         const resSummary = formatResourceSummary(evt.resources)
         log('event got ->', evt.player, resSummary || '(no resource counts)')
+      }
+      break
+    case 'dice_roll':
+      if (typeof evt.diceSum === 'number') {
+        recordDice(evt.diceSum)
+        log('event dice_roll -> sum:', evt.diceSum)
       }
       break
     // Future event types handled here.
@@ -294,13 +308,18 @@ window.__miniExplorer = {
   },
   clear () {
     clearPlayers()
+    clearDice()
     renderOverlay(playerEntries())
+  },
+  dice () {
+    return getDiceCounts()
   }
 }
 
 try {
   getOverlayBody()
   renderOverlay(playerEntries())
+  ensureDebugControls()
   initialScan()
   startObservers(processNode) // observe new DOM
   log(
