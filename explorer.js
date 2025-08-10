@@ -56,6 +56,17 @@ function countResourceImages (container) {
   return counts
 }
 
+// Helper: produce compact non-zero resource summary like "wood:2, brick:1"
+function formatResourceSummary (resources) {
+  try {
+    const nonZero = Object.entries(resources || {}).filter(([, v]) => v > 0)
+    if (!nonZero.length) return ''
+    return nonZero.map(([k, v]) => `${k}:${v}`).join(', ')
+  } catch {
+    return ''
+  }
+}
+
 // 3. Event parsing framework ----------------------------------------------
 /**
  * Event object (shape we commit to):
@@ -108,6 +119,9 @@ function applyEvent (evt) {
     case 'got':
       if (evt.player && evt.resources) {
         addResources(evt.player, evt.resources)
+        // Incremental: internal event log (will later replace external pre-parse logging)
+        const resSummary = formatResourceSummary(evt.resources)
+        log('event got ->', evt.player, resSummary || '(no resource counts)')
       }
       break
     // Future event types handled here.
@@ -190,7 +204,11 @@ function processNode (node) {
 
   const evt = parseLine(lineText, node)
   if (!evt) return
-  applyEvent(evt)
+  try {
+    applyEvent(evt)
+  } catch (e) {
+    warn('applyEvent failed for', evt.type, e)
+  }
 }
 
 function initialScan () {
