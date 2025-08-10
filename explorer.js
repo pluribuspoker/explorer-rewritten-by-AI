@@ -23,6 +23,7 @@ import {
 import { log, warn, err } from './logger.js'
 import {
   addResources,
+  spendResources,
   entries as playerEntries,
   clearPlayers,
   snapshot
@@ -145,10 +146,29 @@ function parseGotEvent (lineText, node) {
   }
 }
 
+// Image-based build event parser (replaces text-classifier variant)
+function parseBuildEvent (lineText, node) {
+  if (!/\bbuilt a\b/i.test(lineText)) return null
+  const playerName = lineText.split(/\s+/)[0]
+  if (!playerName) return null
+  const items = getPlacedItems(node)
+  const imgs = node.querySelectorAll?.('img') || []
+  const imageSrcs = Array.from(imgs).map(img => img.currentSrc || img.src || '')
+  return {
+    type: 'build',
+    player: playerName,
+    items,
+    imageSrcs,
+    rawText: lineText,
+    node
+  }
+}
+
 // Register parsers in priority order (top-first match wins)
 eventParsers.push(parseDiceRollEvent)
 eventParsers.push(parseStartingResourcesEvent)
 eventParsers.push(parseGotEvent)
+eventParsers.push(parseBuildEvent)
 
 function parseLine (lineText, node) {
   for (const parse of eventParsers) {
@@ -190,6 +210,61 @@ function applyEvent (evt) {
         log('event dice_roll -> sum:', evt.diceSum)
       }
       break
+    case 'build':
+      if (evt.player) {
+        const items = evt.items || []
+        if (!items.length) {
+          log(
+            'event build ->',
+            evt.player,
+            'items: (unrecognized yet)',
+            '(image filenames logged)'
+          )
+        } else {
+          for (const item of items) {
+            switch (item) {
+              case 'road': {
+                const spent = spendResources(evt.player, { wood: 1, brick: 1 })
+                log(
+                  'event build ->',
+                  evt.player,
+                  'road',
+                  formatResourceSummary(spent) || '(no spend)'
+                )
+                break
+              }
+              case 'settlement': {
+                const spent = spendResources(evt.player, {
+                  wood: 1,
+                  brick: 1,
+                  sheep: 1,
+                  wheat: 1
+                })
+                log(
+                  'event build ->',
+                  evt.player,
+                  'settlement',
+                  formatResourceSummary(spent) || '(no spend)'
+                )
+                break
+              }
+              case 'city': {
+                const spent = spendResources(evt.player, { wheat: 2, ore: 3 })
+                log(
+                  'event build ->',
+                  evt.player,
+                  'city',
+                  formatResourceSummary(spent) || '(no spend)'
+                )
+                break
+              }
+              default:
+                log('event build ->', evt.player, item, '(no cost logic)')
+            }
+          }
+        }
+      }
+      break
     // Future event types handled here.
     default:
       // (No side-effect yet) – intentionally silent.
@@ -206,11 +281,7 @@ function logEventDetails (lineText, node) {
   let sig = ''
   try {
     sig = lineSignature(lineText, node)
-  } catch {
-    /* ignore */
-  }
-
-  // Resource icons present?
+  } catch {}
   const resources = countResourceImages(node)
   const nonZeroResources = Object.entries(resources).filter(([, v]) => v > 0)
   if (nonZeroResources.length) {
@@ -218,29 +289,28 @@ function logEventDetails (lineText, node) {
       'resources: ' + nonZeroResources.map(([k, v]) => `${k}:${v}`).join(', ')
     )
   }
-
-  // Dice sum detection
   if (/\brolled\b/i.test(lineText)) {
     const sum = getDiceSum(node)
     if (sum !== null) details.push('dice: ' + sum)
   }
-
-  // Placed items
   if (/\bplaced a\b/i.test(lineText)) {
     const placed = getPlacedItems(node)
     if (placed.length) details.push(placed.join(', '))
   }
-
-  // Single consolidated log line including signature (if available) to avoid double logging.
+  if (/\bbuilt a\b/i.test(lineText)) {
+    try {
+      const imgs = node.querySelectorAll?.('img') || []
+      if (imgs.length) {
+        const names = Array.from(imgs)
+          .map(img => (img.currentSrc || img.src || '').split('/').pop())
+          .filter(Boolean)
+        if (names.length) details.push('build_imgs: ' + names.join('|'))
+      }
+    } catch {}
+  }
   const parts = ['line:', lineText]
   if (details.length) parts.push(...details)
-  // Log primary line/details first (without signature)
   log(...parts)
-  // Signature on its own line, with a preceding blank line for readability
-  // if (sig) {
-  //   console.log('') // blank line (no TAG prefix) before signature
-  //   log('sig:', sig)
-  // }
 }
 
 function getDiceSum (node) {
@@ -259,13 +329,19 @@ function getDiceSum (node) {
 function getPlacedItems (node) {
   const imgs = node.querySelectorAll?.('img') || []
   const imgSrcs = Array.from(imgs).map(img => img.currentSrc || img.src || '')
-  const items = []
+  const items = new Set()
   for (const src of imgSrcs) {
-    if (/road_\w+\.\w+\.svg/i.test(src)) items.push('road')
-    if (/settlement_\w+\.\w+\.svg/i.test(src)) items.push('settlement')
-    // Future patterns: city, development_card, etc.
+    const file = src.split('/').pop() || ''
+    if (/icon_bot/i.test(file)) continue // skip avatar/bot markers
+    // Road examples: road_green.<hash>.svg ; allow variant/hashes
+    if (/^road_[^\.]+\.[a-z0-9]+\.svg/i.test(file)) items.add('road')
+    // Settlement examples (expected similar): settlement_<color>.<hash>.svg
+    if (/^settlement_[^\.]+\.[a-z0-9]+\.svg/i.test(file))
+      items.add('settlement')
+    // City examples: city_blue.<hash>.svg
+    if (/^city_[^\.]+\.[a-z0-9]+\.svg/i.test(file)) items.add('city')
   }
-  return items
+  return [...items]
 }
 
 // 6. Node processing / scanning -------------------------------------------

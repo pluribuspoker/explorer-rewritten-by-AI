@@ -40,6 +40,28 @@ export function addResources (name, resources) {
     }
   }
 }
+// Spend (decrement) resources for a player. Clamps at zero & adjusts total by the
+// actual amount removed so total always matches sum of individual resources.
+// Returns an object of what was actually spent.
+export function spendResources (name, costs) {
+  const p = ensurePlayer(name)
+  /** @type {Record<string, number>} */
+  const spent = {}
+  let totalRemoved = 0
+  for (const key of RESOURCE_KEYS) {
+    const want = costs[key] || 0
+    if (!want) continue
+    const have = p[key] || 0
+    const remove = Math.min(have, want)
+    if (remove > 0) {
+      p[key] = have - remove
+      spent[key] = remove
+      totalRemoved += remove
+    }
+  }
+  if (totalRemoved) p.total = Math.max(0, p.total - totalRemoved)
+  return spent
+}
 export function snapshot () {
   return [...players.entries()].map(([player, r]) => ({ player, ...r }))
 }
