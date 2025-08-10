@@ -169,10 +169,33 @@ function parseBuildEvent (lineText, node) {
   }
 }
 
+// Development card purchase (image-based) parser
+function parseDevCardPurchaseEvent (lineText, node) {
+  // Text usually: "<PlayerName> bought" with a devcard back image present
+  if (!/\bbought\b/i.test(lineText)) return null
+  const playerName = lineText.split(/\s+/)[0]
+  if (!playerName) return null
+  const imgs = node.querySelectorAll?.('img') || []
+  if (!imgs.length) return null
+  const imageFiles = Array.from(imgs).map(
+    img => (img.currentSrc || img.src || '').split('/').pop() || ''
+  )
+  const hasDevCard = imageFiles.some(f => /devcard/i.test(f))
+  if (!hasDevCard) return null
+  return {
+    type: 'buy_devcard',
+    player: playerName,
+    imageFiles,
+    rawText: lineText,
+    node
+  }
+}
+
 // Register parsers in priority order (top-first match wins)
 eventParsers.push(parseDiceRollEvent)
 eventParsers.push(parseStartingResourcesEvent)
 eventParsers.push(parseGotEvent)
+eventParsers.push(parseDevCardPurchaseEvent)
 eventParsers.push(parseBuildEvent)
 
 function parseLine (lineText, node) {
@@ -268,6 +291,16 @@ function applyEvent (evt) {
             }
           }
         }
+      }
+      break
+    case 'buy_devcard':
+      if (evt.player) {
+        const spent = spendResources(evt.player, { sheep: 1, wheat: 1, ore: 1 })
+        log(
+          'event buy_devcard ->',
+          evt.player,
+          formatResourceSummary(spent) || '(no spend)'
+        )
       }
       break
     // Future event types handled here.
