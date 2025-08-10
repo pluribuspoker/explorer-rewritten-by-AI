@@ -82,13 +82,47 @@ const eventParsers = []
 
 // --- Concrete parsers ----------------------------------------------------
 
-function parseGotEvent (lineText, node) {
-  if (!/\bgot\b/i.test(lineText)) return null
+function parseStartingResourcesEvent (lineText, node) {
+  // Shape: "<PlayerName> received starting resources" + resource icons
+
+  // 1. Quick textual check
+  if (!/received starting resources/i.test(lineText)) return null
+
+  // 2. Extract player name (first token)
   const playerName = lineText.split(/\s+/)[0]
   if (!playerName) return null
+
+  // 3. Count resource icons present in the DOM node
+  const resources = countResourceImages(node)
+  const any = RESOURCE_KEYS.some(k => resources[k] > 0)
+  if (!any) return null
+
+  // 4. Produce normalized event object
+  return {
+    type: 'starting_resources',
+    player: playerName,
+    resources,
+    rawText: lineText,
+    node
+  }
+}
+
+function parseGotEvent (lineText, node) {
+  // Shape: "<PlayerName> got ..." + resource icons
+
+  // 1. Quick textual check
+  if (!/\bgot\b/i.test(lineText)) return null
+
+  // 2. Extract player name
+  const playerName = lineText.split(/\s+/)[0]
+  if (!playerName) return null
+
+  // 3. Count resource icons
   const resources = countResourceImages(node)
   const gotAny = RESOURCE_KEYS.some(k => resources[k] > 0)
   if (!gotAny) return null
+
+  // 4. Event object
   return {
     type: 'got',
     player: playerName,
@@ -99,6 +133,7 @@ function parseGotEvent (lineText, node) {
 }
 
 // Register parsers in priority order (top-first match wins)
+eventParsers.push(parseStartingResourcesEvent)
 eventParsers.push(parseGotEvent)
 
 function parseLine (lineText, node) {
@@ -116,6 +151,17 @@ function parseLine (lineText, node) {
 // 4. Event side-effects ----------------------------------------------------
 function applyEvent (evt) {
   switch (evt.type) {
+    case 'starting_resources':
+      if (evt.player && evt.resources) {
+        addResources(evt.player, evt.resources)
+        const resSummary = formatResourceSummary(evt.resources)
+        log(
+          'event starting_resources ->',
+          evt.player,
+          resSummary || '(no resource counts)'
+        )
+      }
+      break
     case 'got':
       if (evt.player && evt.resources) {
         addResources(evt.player, evt.resources)
