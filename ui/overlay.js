@@ -13,25 +13,26 @@ export function getOverlayBody () {
       top: '56px',
       right: '8px',
       zIndex: 999999,
-      font: '12px/1.3 -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
+      font: '13px/1.35 -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
       background: 'rgba(20,20,20,0.85)',
       color: '#fff',
-      padding: '8px 10px',
+      padding: '10px 12px',
       borderRadius: '10px',
       boxShadow: '0 4px 16px rgba(0,0,0,.3)',
-      maxWidth: '280px',
+      maxWidth: '360px',
       pointerEvents: 'auto',
       userSelect: 'none'
     })
     root.innerHTML = `
       <div id="mini-explorer-header" style="font-weight:600;margin-bottom:6px;cursor:move">Mini Explorer</div>
-      <div id="mini-explorer-body" style="white-space:pre-wrap"></div>
+      <div id="mini-explorer-body"></div>
       <div id="mini-explorer-dice-graph" style="margin-top:6px"></div>
       <div id="mini-explorer-debug" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;pointer-events:auto"></div>
     `
     document.documentElement.appendChild(root)
     restoreOverlayPosition(root)
     enableDrag(root)
+    injectOverlayStyles()
   }
   overlayBodyEl = root.querySelector('#mini-explorer-body')
   diceGraphEl = root.querySelector('#mini-explorer-dice-graph')
@@ -102,18 +103,58 @@ export function ensureDebugControls () {
 
 export function renderOverlay (playerEntries) {
   const body = getOverlayBody()
-  const lines = [...playerEntries].map(
-    ([name, r]) =>
-      `${name.padEnd(10)}  ` +
-      `🪵${r.wood} ` +
-      `🧱${r.brick} ` +
-      `🐑${r.sheep} ` +
-      `🌾${r.wheat} ` +
-      `⛰️${r.ore}  = ${r.total}`
-  )
-  body.textContent = lines.length
-    ? lines.join('\n')
-    : "Listening… (roll, chat, 'got' events)"
+  // Normalize & cache entries (iterator may be one-use)
+  let rows = []
+  try {
+    if (!playerEntries) rows = []
+    else if (Array.isArray(playerEntries)) rows = playerEntries
+    else if (playerEntries instanceof Map) rows = [...playerEntries.entries()]
+    else rows = [...playerEntries] // assume iterable of [name, resources]
+  } catch {
+    rows = []
+  }
+
+  if (rows.length === 0) {
+    body.textContent = "Listening… (roll, chat, 'got' events)"
+    return
+  }
+
+  // Column headers / icons
+  const ICONS = getResourceIcons()
+  const headers = [
+    { key: 'name', label: 'Player' },
+    { key: 'wood', label: ICONS.wood },
+    { key: 'brick', label: ICONS.brick },
+    { key: 'sheep', label: ICONS.sheep },
+    { key: 'wheat', label: ICONS.wheat },
+    { key: 'ore', label: ICONS.ore }
+  ]
+
+  // Find max to highlight leader(s)
+  let maxTotal = 0
+  for (const [, r] of rows) maxTotal = Math.max(maxTotal, r.total || 0)
+
+  const tableRows = rows.map(([name, r]) => {
+    const isLeader = r.total === maxTotal && maxTotal > 0
+    return `<div class="mx-row${isLeader ? ' mx-leader' : ''}">
+      <div class="mx-cell mx-name" title="${name}">${escapeHtml(name)}</div>
+      <div class="mx-cell">${r.wood ?? 0}</div>
+      <div class="mx-cell">${r.brick ?? 0}</div>
+      <div class="mx-cell">${r.sheep ?? 0}</div>
+      <div class="mx-cell">${r.wheat ?? 0}</div>
+  <div class="mx-cell">${r.ore ?? 0}</div>
+    </div>`
+  })
+
+  const headerRow = `<div class="mx-row mx-header">${headers
+    .map(h => `<div class="mx-cell mx-h">${h.label}</div>`)
+    .join('')}</div>`
+
+  body.innerHTML = `
+    <div class="mx-table" role="table" aria-label="Player resources">
+      ${headerRow}
+      ${tableRows.join('')}
+    </div>`
 }
 
 // Render dice bar graph (2-12) with heights proportional to counts
@@ -215,4 +256,42 @@ function restoreOverlayPosition (root) {
   } catch {
     /* ignore */
   }
+}
+
+// --- Styles / helpers -----------------------------------------------------
+function injectOverlayStyles () {
+  if (document.getElementById('mini-explorer-styles')) return
+  const style = document.createElement('style')
+  style.id = 'mini-explorer-styles'
+  style.textContent = `
+    #mini-explorer .mx-table { display:flex; flex-direction:column; gap:2px; }
+  #mini-explorer .mx-row { display:grid; grid-template-columns: 1fr repeat(5, 34px); align-items:stretch; }
+    #mini-explorer .mx-header { font-weight:600; font-size:12px; opacity:.85; }
+    #mini-explorer .mx-cell { padding:3px 4px; text-align:center; font-variant-numeric:tabular-nums; }
+    #mini-explorer .mx-name { text-align:left; padding-left:6px; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #mini-explorer .mx-row:not(.mx-header):hover { background:rgba(255,255,255,0.06); }
+    #mini-explorer .mx-row.mx-leader { background:linear-gradient(90deg,rgba(255,215,0,0.18),rgba(255,215,0,0)); }
+    #mini-explorer .mx-h { filter:brightness(1.1); }
+  `
+  document.head.appendChild(style)
+}
+
+function getResourceIcons () {
+  // Chosen for clarity & quick visual parse; adjust if you prefer originals
+  return {
+    wood: '🌲', // alternative: 🪵
+    brick: '🧱',
+    sheep: '🐑',
+    wheat: '🌾',
+    ore: '🪨' // alternative: ⛏️ / ⛰️
+  }
+}
+
+function escapeHtml (str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
