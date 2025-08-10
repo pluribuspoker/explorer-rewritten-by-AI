@@ -36,7 +36,12 @@ import {
   renderDiceGraph
 } from './ui/overlay.js'
 import { walkAllNodes, startObservers } from './dom.js'
-import { lineSignature, isSignatureDuplicate, markSignature } from './dedup.js'
+import {
+  lineSignature,
+  isSignatureDuplicate,
+  markSignature,
+  clearSignatures
+} from './dedup.js'
 
 // 2. Generic helpers / tiny utilities -------------------------------------
 
@@ -396,6 +401,7 @@ window.__miniExplorer = {
   clear () {
     clearPlayers()
     clearDice()
+    clearSignatures()
     renderOverlay(playerEntries())
     renderDiceGraph(getDiceCounts())
   },

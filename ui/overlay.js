@@ -95,7 +95,7 @@ export function ensureDebugControls () {
   bar.appendChild(
     makeBtn(
       'Clear',
-      'Clear player + dice state',
+      'Clear player, dice, and duplicate signature state',
       () => api.clear && api.clear()
     )
   )

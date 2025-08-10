@@ -58,3 +58,8 @@ export function consumeDuplicateCheck (lineText, node) {
 export function _debugSignatureCount () {
   return processedLineSignatures.size
 }
+
+// Clear all stored signatures (used by debug surface clear)
+export function clearSignatures () {
+  processedLineSignatures.clear()
+}
