@@ -172,7 +172,7 @@ export function renderDiceGraph (counts) {
       const h = v === 0 ? 2 : Math.max(4, Math.round((v / max) * barMaxPx))
       const opacity = v === 0 ? 0.25 : 0.85
       return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1;min-width:14px;">
-        <div class="mx-dice-bar" data-tip="${label}: ${v}" style="width:100%;background:linear-gradient(180deg,#4caf50,#2e7d32);height:${h}px;border-radius:3px 3px 0 0;opacity:${opacity};transition:height .25s ease,opacity .25s ease;position:relative;"></div>
+        <div class="mx-dice-bar" data-tip="${v}" style="width:100%;background:linear-gradient(180deg,#4caf50,#2e7d32);height:${h}px;border-radius:3px 3px 0 0;opacity:${opacity};transition:height .25s ease,opacity .25s ease;position:relative;"></div>
         <div style="font-size:10px;margin-top:2px;opacity:.8">${label}</div>
       </div>`
     })
