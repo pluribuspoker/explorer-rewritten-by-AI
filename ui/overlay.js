@@ -136,7 +136,9 @@ export function renderDiceGraph (counts) {
       </div>`
     })
     .join('')
-  diceGraphEl.innerHTML = `<div style="display:flex;align-items:flex-end;gap:4px;height:${barMaxPx + 18}px;">${barsHtml}</div>`
+  diceGraphEl.innerHTML = `<div style="display:flex;align-items:flex-end;gap:4px;height:${
+    barMaxPx + 18
+  }px;">${barsHtml}</div>`
 }
 
 // --- Drag + position persistence -----------------------------------------
@@ -195,7 +197,9 @@ function persistOverlayPosition (root) {
     if (top && left) {
       localStorage.setItem('miniExplorerPos', JSON.stringify({ top, left }))
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 function restoreOverlayPosition (root) {
@@ -208,5 +212,7 @@ function restoreOverlayPosition (root) {
       root.style.left = left
       root.style.right = ''
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }

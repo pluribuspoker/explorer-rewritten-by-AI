@@ -316,7 +316,7 @@ window.__miniExplorer = {
     clearPlayers()
     clearDice()
     renderOverlay(playerEntries())
-  renderDiceGraph(getDiceCounts())
+    renderDiceGraph(getDiceCounts())
   },
   dice () {
     return getDiceCounts()
