@@ -29,6 +29,7 @@ import {
 } from './state/players.js'
 import { getOverlayBody, renderOverlay } from './ui/overlay.js'
 import { walkAllNodes, startObservers } from './dom.js'
+import { lineSignature, isSignatureDuplicate, markSignature } from './dedup.js'
 
 // 2. Generic helpers / tiny utilities -------------------------------------
 
@@ -182,6 +183,12 @@ function applyEvent (evt) {
 // 5. Logging & diagnostics -------------------------------------------------
 function logEventDetails (lineText, node) {
   const details = []
+  let sig = ''
+  try {
+    sig = lineSignature(lineText, node)
+  } catch {
+    /* ignore */
+  }
 
   // Resource icons present?
   const resources = countResourceImages(node)
@@ -204,8 +211,11 @@ function logEventDetails (lineText, node) {
     if (placed.length) details.push(placed.join(', '))
   }
 
-  if (details.length) log('line:', lineText, ...details)
-  else log('line:', lineText)
+  // Single consolidated log line including signature (if available) to avoid double logging.
+  const parts = ['line:', lineText]
+  if (details.length) parts.push(...details)
+  if (sig) parts.push('sig:', sig)
+  log(...parts)
 }
 
 function getDiceSum (node) {
@@ -234,16 +244,20 @@ function getPlacedItems (node) {
 }
 
 // 6. Node processing / scanning -------------------------------------------
-const seenDomNodes = new WeakSet()
-
 function processNode (node) {
   if (!(node instanceof HTMLElement)) return
-  if (seenDomNodes.has(node)) return
 
   const lineText = textFrom(node)
   if (!lineText || !CANDIDATE_LINE_REGEX.test(lineText)) return
 
-  seenDomNodes.add(node)
+  // Virtualization duplicate guard (content-based)
+  const sig = lineSignature(lineText, node)
+  if (isSignatureDuplicate(sig)) {
+    // Debug: uncomment to inspect suppressed duplicates
+    // log('dedup skip (signature already processed):', lineText)
+    return
+  }
+  markSignature(sig)
 
   // Log diagnostic info regardless of whether any parser claims the line.
   logEventDetails(lineText, node)
