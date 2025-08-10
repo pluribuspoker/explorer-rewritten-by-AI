@@ -191,11 +191,29 @@ function parseDevCardPurchaseEvent (lineText, node) {
   }
 }
 
+// Discard event parser (player discards specific resource cards)
+function parseDiscardEvent (lineText, node) {
+  if (!/\bdiscarded\b/i.test(lineText)) return null
+  const playerName = lineText.split(/\s+/)[0]
+  if (!playerName) return null
+  const resources = countResourceImages(node)
+  const any = RESOURCE_KEYS.some(k => resources[k] > 0)
+  if (!any) return null
+  return {
+    type: 'discard',
+    player: playerName,
+    resources,
+    rawText: lineText,
+    node
+  }
+}
+
 // Register parsers in priority order (top-first match wins)
 eventParsers.push(parseDiceRollEvent)
 eventParsers.push(parseStartingResourcesEvent)
 eventParsers.push(parseGotEvent)
 eventParsers.push(parseDevCardPurchaseEvent)
+eventParsers.push(parseDiscardEvent)
 eventParsers.push(parseBuildEvent)
 
 function parseLine (lineText, node) {
@@ -301,6 +319,38 @@ function applyEvent (evt) {
           evt.player,
           formatResourceSummary(spent) || '(no spend)'
         )
+      }
+      break
+    case 'discard':
+      if (evt.player && evt.resources) {
+        // Use spendResources to clamp in case of mismatch; resources represent cards shown as discarded.
+        const requested = evt.resources
+        const removed = spendResources(evt.player, requested)
+        const reqSummary = formatResourceSummary(requested)
+        const removedSummary = formatResourceSummary(removed)
+        // Detect shortfalls (cards shown but we didn't think player had)
+        const shortfalls = []
+        for (const k of RESOURCE_KEYS) {
+          const want = requested[k] || 0
+          // @ts-ignore - removed may not have all keys
+          const took = removed[k] || 0
+          if (want > took) shortfalls.push(`${k}:${want - took}`)
+        }
+        if (!shortfalls.length) {
+          log(
+            'event discard ->',
+            evt.player,
+            removedSummary || '(no resources)'
+          )
+        } else {
+          log(
+            'event discard ->',
+            evt.player,
+            removedSummary || '(none removed)',
+            `(requested: ${reqSummary})`,
+            `(shortfall: ${shortfalls.join(', ')})`
+          )
+        }
       }
       break
     // Future event types handled here.
