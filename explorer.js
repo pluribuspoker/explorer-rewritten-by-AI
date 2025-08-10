@@ -234,8 +234,13 @@ function logEventDetails (lineText, node) {
   // Single consolidated log line including signature (if available) to avoid double logging.
   const parts = ['line:', lineText]
   if (details.length) parts.push(...details)
-  if (sig) parts.push('sig:', sig)
+  // Log primary line/details first (without signature)
   log(...parts)
+  // Signature on its own line, with a preceding blank line for readability
+  // if (sig) {
+  //   console.log('') // blank line (no TAG prefix) before signature
+  //   log('sig:', sig)
+  // }
 }
 
 function getDiceSum (node) {
