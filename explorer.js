@@ -38,9 +38,9 @@ import {
 import { walkAllNodes, startObservers } from './dom.js'
 import {
   lineSignature,
-  isSignatureDuplicate,
-  markSignature,
-  clearSignatures
+  clearSignatures,
+  isContextualDuplicate,
+  markContext
 } from './dedup.js'
 
 // 2. Generic helpers / tiny utilities -------------------------------------
@@ -316,6 +316,7 @@ function logEventDetails (lineText, node) {
   const parts = ['line:', lineText]
   if (details.length) parts.push(...details)
   log(...parts)
+  log('signature:', sig)
 }
 
 function getDiceSum (node) {
@@ -356,14 +357,29 @@ function processNode (node) {
   const lineText = textFrom(node)
   if (!lineText || !CANDIDATE_LINE_REGEX.test(lineText)) return
 
-  // Virtualization duplicate guard (content-based)
+  // Sibling-context virtualization duplicate guard.
+  let prevNode = node.previousElementSibling
+  let prevSig = null
+  while (prevNode) {
+    try {
+      const t = textFrom(prevNode)
+      if (t && CANDIDATE_LINE_REGEX.test(t)) {
+        prevSig = lineSignature(t, prevNode)
+        break
+      }
+    } catch {}
+    prevNode = prevNode.previousElementSibling
+  }
+
   const sig = lineSignature(lineText, node)
-  if (isSignatureDuplicate(sig)) {
-    // Debug: uncomment to inspect suppressed duplicates
-    // log('dedup skip (signature already processed):', lineText)
+  if (isContextualDuplicate(sig, prevSig)) {
+    // log('context dedup skip:', lineText)
     return
   }
-  markSignature(sig)
+  markContext(sig, prevSig)
+  // Identity debug logging removed (was used to hunt stable DOM IDs).
+
+  // (Simple global signature suppression removed; contextual logic above decides.)
 
   // Log diagnostic info regardless of whether any parser claims the line.
   logEventDetails(lineText, node)
