@@ -1,0 +1,11 @@
+{
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.formatOnSave": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "javascript.format.enable": false,
+  "prettier.singleQuote": true,
+  "prettier.trailingComma": "es5",
+  "prettier.semi": true
+}
